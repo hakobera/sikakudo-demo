@@ -15,7 +15,7 @@
 
     var path = window.location.hostname + ':' + window.location.port;
 
-    socket = new WebSocket('ws://' + path);
+    socket = io.connect();
     //socket.binaryType = 'blob';
   }
 
@@ -53,7 +53,7 @@
     }
 
     var dataUrl = dest.toDataURL("image/jpeg");
-    socket.send(dataUrl);
+    socket.emit('face', dataUrl);
   };
 
   document.addEventListener('DOMContentLoaded', init);

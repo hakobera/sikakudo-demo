@@ -2,38 +2,33 @@ var express = require('express')
   , routes = require('./routes');
 
 var app = module.exports = express.createServer();
+var io = require('socket.io').listen(app);
 
-var WebSocketServer = require('websocket').server;
+io.sockets.on('connection', function (socket) {
 
-var ws = new WebSocketServer({
-  httpServer: app,
-  maxReceivedFrameSize: 0x1000000,
-  autoAcceptConnections: false
+  socket.on('face', function(message) {
+    console.log((new Date()) + ' Server on message');
+    socket.broadcast.volatile.emit('facecast', message);
+  });
+
+  socket.on('disconnect', function () {
+    console.log('close %d', socket.id);
+  });
+
 });
 
-function originIsAllowed(origin) {
-  // put logic here to detect whether the specified origin is allowed.
-  return true;
-}
-
-ws.on('request', function(req) {
-  var con = req.accept(null, req.origin);
-
-  con.on('message', function(message) {
-    console.log((new Date()) + ' Server on message');
-    //console.log(message);
-    if (message.type === 'utf8') {
-      // text data
-      ws.broadcast(message.utf8Data);
-    } else if (message.type === 'binary') {
-      ws.broadcast(message.binalyData);
-    }
-  });
-
-  con.on('close', function(reasonCode, description) {
-    console.log((new Date()) + ' Peer ' + con.remoteAddress + ' disconnected.');
-  });
-
+io.configure('production', function() {
+  io.enable('browser client minification');  // send minified client
+  io.enable('browser client etag');          // apply etag caching logic based on version number
+  io.enable('browser client gzip');          // gzip the file
+  io.set('log level', 1);                    // reduce logging
+  io.set('transports', [                     // enable all transports (optional if you want flashsocket)
+      'websocket'
+    , 'flashsocket'
+    , 'htmlfile'
+    , 'xhr-polling'
+    , 'jsonp-polling'
+  ]);
 });
 
 // Configuration

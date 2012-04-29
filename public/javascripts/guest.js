@@ -14,14 +14,10 @@ window.onload = function() {
   }
 
   console.log('connected to ' + uri);
-  var socket = new WebSocket(uri);
+  var socket = new io.connect();
   // socket.binaryType = 'blob';
 
-  socket.onopen = function() {
-    console.log('connected');
-  };
-
-  socket.onmessage = function(message) {
-    render(message.data);
-  }
+  socket.on('facecast', function(message) {
+    render(message);
+  });
 };
