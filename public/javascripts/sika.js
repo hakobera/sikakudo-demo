@@ -1,61 +1,48 @@
-(function() {
-  var src,
-      dest,
-      socket,
-      width = 320,
-      height = 240;
+window.onload = function () {
+  var SCREEN_WIDTH = 320;
+  var SCREEN_HEIGHT = 240;
 
-  var image = new Image();
-  image.src = "/images/persona.jpg";
+  var socket = io.connect();
 
-  function init() {
-    src = document.getElementById("src");
-    dest = document.getElementById("dest");
-    navigator.webkitGetUserMedia("video", onGotStream, onFailedStream);
+  var personaImage = new Image();
+  personaImage.src = "/images/persona.png";
 
-    var path = window.location.hostname + ':' + window.location.port;
+  var srcStream = document.getElementById("src"),
+    workCanvas = document.createElement('canvas'),
+    workContext = workCanvas.getContext('2d'),
+    destCanvas = document.getElementById("dest"),
+    destContext = destCanvas.getContext('2d');
 
-    socket = io.connect();
-    //socket.binaryType = 'blob';
-  }
+  workCanvas.width = SCREEN_WIDTH;
+  workCanvas.height = SCREEN_HEIGHT;
+  destCanvas.width = SCREEN_WIDTH;
+  destCanvas.height = SCREEN_HEIGHT;
 
-  function onGotStream(stream) {
+  navigator.webkitGetUserMedia("video", success, fail);
+
+  function success(stream) {
     var url = webkitURL.createObjectURL(stream);
-    src.src = url;
-    setInterval(draw, 1000);
+    srcStream.src = url;
+    setInterval(draw, 500);
   }
 
-  function onFailedStream(error) {
-    alert("onFailedStream");
+  function fail(error) {
+    alert("GetUserMedia() failed");
   }
 
   function draw() {
-    var canvas = document.createElement("canvas");
+    workContext.drawImage(srcStream, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    destContext.drawImage(srcStream, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    canvas.width = width;
-    canvas.height = height;
-    var context = canvas.getContext("2d");
-    context.drawImage(src, 0,0,width,height);
+    var comp = ccv.detect_objects({"canvas":ccv.grayscale(workCanvas),
+      "cascade":cascade,
+      "interval":5,
+      "min_neighbors":1 });
 
-    dest.width = width;
-    dest.height = height;
-    var context2 = dest.getContext("2d");
-    context2.drawImage(src,0,0,width,height);
-
-    var comp = ccv.detect_objects({"canvas" :ccv.grayscale(canvas),
-      "cascade" : cascade,
-      "interval" : 5,
-      "min_neighbors" : 1 });
-
-    var i = 0, length = comp.length;
-    for (; i < length; i++) {
-      context2.drawImage(image, comp[i].x-30, comp[i].y-30, comp[i].width+60, comp[i].height+60);
+    for (var i = 0, length = comp.length; i < length; i++) {
+      destContext.drawImage(personaImage, comp[i].x - 50, comp[i].y - 70, comp[i].width + 120, comp[i].height + 120);
     }
 
-    var dataUrl = dest.toDataURL("image/jpeg");
-    socket.emit('face', dataUrl);
-  };
-
-  document.addEventListener('DOMContentLoaded', init);
-
-}());
+    socket.emit('face', destCanvas.toDataURL("image/jpeg"));
+  }
+};
